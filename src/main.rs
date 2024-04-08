@@ -4,10 +4,15 @@ use std::io;
 struct ItemSimple {
     value: i32,
     fi: i32,
+    fi_acc: i32,
+    fri: f32,
+    fri_acc: f32,
 }
 
 struct FrequencySimple {
-    k: Option<i32>,
+    k: i32,
+    total: i32,
+    media: f32,
     items: Vec<ItemSimple>,
 }
 
@@ -88,9 +93,11 @@ fn generate_frequency_simple(_: i32) -> i32 {
 
     raw_data.sort();
 
-    let mut frequency_items: Vec<ItemSimple> = Vec::new();
+    let frequency_items: Vec<ItemSimple> = Vec::new();
     let mut frequency_simple = FrequencySimple {
-        k: Option::None,
+        k: 0,
+        media: 0.0,
+        total: frequency_items.len() as i32,
         items: frequency_items,
     };
 
@@ -100,54 +107,105 @@ fn generate_frequency_simple(_: i32) -> i32 {
             item.value == *v
         });
 
-        if (item_index.is_none()) {
+        if item_index.is_none() {
             frequency_simple.items.push(ItemSimple {
                 value: *v,
                 fi: 1,
+                fi_acc: 1,
+                fri: 0.0,
+                fri_acc: 0.0,
             })
         } else {
-            let mut new_frequency_simple = Vec::new();
+            frequency_simple.items = frequency_simple.items.iter().enumerate().map(|(i, v)| {
+                if item_index.unwrap() == i {
+                    let fi = v.fi + 1;
+                    let fi_acc = fi;
 
-
-            for (i, v) in frequency_simple.items.iter().enumerate() {
-                if (item_index.unwrap() == i) {
-                    new_frequency_simple.push(ItemSimple {
+                    ItemSimple {
                         value: v.value,
-                        fi: v.fi + 1,
-                    })
+                        fi,
+                        fi_acc,
+                        fri: 0.0,
+                        fri_acc: 0.0,
+                    }
                 } else {
-                    new_frequency_simple.push(*v);
+                    *v
                 }
-            }
-
-            frequency_simple.items = new_frequency_simple;
+            }).collect();
         }
     });
 
-    println!("\n\nTabela");
+    frequency_simple.items.iter().for_each(|item| {
+        frequency_simple.total += item.fi;
+    });
+
+
+    frequency_simple.items = frequency_simple.items.iter().map(|item| {
+        let fri = (item.fi as f32 / frequency_simple.total as f32) * 100.0;
+
+        ItemSimple {
+            fri,
+            fi: item.fi,
+            value: item.value,
+            fi_acc: item.fi_acc,
+            fri_acc: fri,
+        }
+    }).collect();
+
+    let mut last_fi_acc: Option<i32> = Option::None;
+    let mut last_fri_acc: Option<f32> = Option::None;
+
+    let mut pre_frequency_media: f32 = 0.0;
+
+    frequency_simple.items.iter().for_each(|item| pre_frequency_media += (item.value * item.fi) as f32);
+
+    frequency_simple.media = pre_frequency_media / frequency_simple.total as f32;
+
+
+    frequency_simple.items = frequency_simple.items.iter().enumerate().map(|(i, item)| {
+        if i > 0 {
+            let fi_acc = item.fi + last_fi_acc.unwrap();
+            let fri_acc = item.fri_acc + last_fri_acc.unwrap();
+
+            last_fi_acc = Option::from(fi_acc);
+            last_fri_acc = Option::from(fri_acc);
+
+            ItemSimple {
+                fri: item.fri,
+                fi: item.fi,
+                value: item.value,
+                fri_acc,
+                fi_acc,
+            }
+        } else {
+            last_fi_acc = Option::from(item.fi);
+            last_fri_acc = Option::from(item.fri);
+
+            *item
+        }
+    }).collect();
+
+
+    println!("\n\nTABELA");
+    println!("╔════════════════════════════════════════╗");
+
+    println!("k = {}", frequency_simple.k);
+    println!("Total = {}", frequency_simple.total);
+    println!("Média ponderada = {}", frequency_simple.media);
     println!(
-        "\n{0: <10} | {1: <10}",
-        "Valor", "Fi"
+        "\n{0: <10} | {1: <10} | {2: <10} | {3: <10} | {4: <10}",
+        "Valor", "fi", "fri (%)", "Fi", "Fri (%)"
     );
 
     frequency_simple.items.iter().for_each(|e|
         {
-            println!("{0: <10} | {1: <10}", e.value, e.fi);
+            println!("{0: <10} | {1: <10} | {2: <10} | {3: <10} | {4: <10}", e.value, e.fi, e.fri, e.fi_acc, e.fri_acc);
         });
 
     0
 }
 
 fn generate_frequency_interval(_: i32) -> i32 {
-    println!("Intervalo");
-    // loop {
-    //     let mut frequency_type = String::new();
-    //
-    //     eprint!("\nQual o tipo de frequência: ");
-    //
-    //     io::stdin().read_line(&mut frequency_type).unwrap();
-    // }
-
     0
 }
 
